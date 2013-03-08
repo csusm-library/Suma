@@ -3,26 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <title>Suma administrative tools</title>
+  <?php echo $this->render('includes/head.php'); ?>
 </head>
 <body>
+  <?php echo $this->render('admin/header.phtml'); ?>
   <div class="row">
-    <div class="span12">
-      <?php echo $this->render('admin/header.phtml'); ?>
-    </div>
-  </div>
-  <div class="row">
-    <div class="span4"></div>
     <div class="span8">
       <h3><a href="<?php echo $this->baseUrl(); ?>/admin/locations">Edit locations</a></h3>
       <h3><a href="<?php echo $this->baseUrl(); ?>/admin/initiatives">Edit initiatives</a></h3>
       <h3><a href="<?php echo $this->baseUrl(); ?>/admin/sessions">Sessions List</a></h3>
       <h3><a href="<?php echo $this->baseUrl(); ?>/admin/jsonimport">Direct JSON Import</a></h3>
     </div>
+    <div class="span4"></div>
   </div>
-  <div class="row">
-    <div class="span12">
-      <?php echo $this->render('admin/footer.phtml'); ?>
-    </div>
-  </div>
+  <?php echo $this->render('admin/footer.phtml'); ?>
 </body>
 </html>
