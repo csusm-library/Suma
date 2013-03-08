@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8" />
     <title>Suma administrative tools</title>
+<?php echo $this->render('includes/head.php'); ?>
 </head>
 <body>
-<?php
-$this->render('admin/header.phtml');
+<?php echo $this->render('admin/header.phtml');
 
 $session = $this->session;
 $init = $this->init;
@@ -23,16 +23,16 @@ echo ' <strong>Session ID:</strong>'.$session->getMetadata('id').', <strong>Star
      .', <strong>End:</strong>'.$session->getMetadata('end').', <strong>TranS:</strong>'.$trans['start']
      .', <strong>TranE:</strong>'.$trans['end'].', <strong>Total: </strong>'.$sum.'</p>';
 
-     
+
 $locations = $this->locations;
-echo '<table border="1"><tr>';
+echo '<table class="table"><tr>';
 $locHash = array();
 foreach($locations as $location)
 {
     echo '<th>'. $location->getMetadata('title') . '</th>';
     $locHash[$location->getMetadata('id')] = $location->getMetadata('title');
 }
-echo '</tr><tr style="text-align:center;">';     
+echo '</tr><tr style="text-align:center;">';
 
 foreach($locHash as $key => $val)
 {
@@ -51,14 +51,14 @@ foreach($activities as $activity)
 foreach($counts as $count)
 {
     $activitiesJoin = $session->getJoinByCntId($count['id']);
-    
+
     echo '<p>';
     echo '<strong>Count ID:</strong> '.$count['id'].'<br>';
     echo '<strong>Count Time:</strong> '.$count['occurrence'].'<br>';
     echo '<strong>Count Number:</strong> '.$count['number'].'<br>';
     echo '<strong>Count Location ID:</strong> '.$count['fk_location'].'<br>';
     echo '<strong>Location Title:</strong> '.$locHash[$count['fk_location']].'<br>';
-    
+
     foreach ($activitiesJoin as $join)
     {
         echo '<strong>Activity ID:</strong> '.$join['fk_activity'].'<br>';
@@ -67,7 +67,7 @@ foreach($counts as $count)
     echo '</p>';
 }
 
-$this->render('admin/footer.phtml');
+echo $this->render('admin/footer.phtml');
 ?>
 </body>
 </html>

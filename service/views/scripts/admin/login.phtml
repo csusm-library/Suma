@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <title>Suma administrative tools</title>
+  <meta charset="UTF-8" />
+  <title>Suma administrative tools</title>
+  <?php echo $this->render('includes/head.php'); ?>
 </head>
 <body>
-   <?php echo $this->render('admin/header.phtml'); ?>
-   <p>Suma Admin Login</p> 
+   <h1>Suma Admin Login</h1>
    <form name="login" method="post" action='authenticate'>
    <table>
       <tr>
@@ -17,9 +17,8 @@
         <td>Password:</td>
         <td><input type='password' name='password'></td>
       </tr>
-    </table>     
+    </table>
     <input type='submit' name='login' value='Login'>
     </form>
-    
 </body>
 </html>
