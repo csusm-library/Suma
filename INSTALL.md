@@ -9,7 +9,7 @@ These requirements as based on our local testing. Earlier versions may also work
 * MySQL recommended version 5.1
 * Apache recommended version 2.2
 * PHP recommended version 5.3.3 (although 5.2.3 may also work)
-* Zend Framework 1.11 - required for Suma server
+* Zend Framework 1.12 - required for Suma server, included with Suma Code
 * Various Javascript Libraries - all included with Suma code
 
 Additional Client Requirements:
@@ -17,12 +17,14 @@ Additional Client Requirements:
 * Device or computer with WebKit browser (e.g. iOS and Android browsers, Safari, Google Chrome) needed to use Suma client
 
 
-Zend Framework Installation
+Zend Framework Installation (optional)
 -----------------------------
 
-Download link: http://framework.zend.com/download/latest
+**Zend Framework is now bundled with Suma and requires no additional action.** If you would prefer to use your own version of Zend, follow the instructions below.
 
-Installation instructions url: http://framework.zend.com/manual/1.11/en/introduction.installation.html
+Download link: http://framework.zend.com/downloads/latest#ZF1
+
+Installation instructions url: http://framework.zend.com/manual/1.12/en/introduction.installation.html
 
 Or do the following:
 
@@ -95,7 +97,7 @@ If using Apache's rewrite module add these lines in your web server (likely http
     RewriteRule ^.*$ index.php [NC,L]
     </Directory>
 
-**Don't forget to change YOUR_WEB_DIR to the directory in your web space that contains the `service/web/` content**
+**Don't forget to change `YOUR_WEB_DIR` to the directory in your web space that contains the `service/web/` content**
 Restart apache after adding these lines for configuration to apply
 
 .htaccess
@@ -124,7 +126,7 @@ Now you have to run a database initialization script included in the suma downlo
 
     To run it you can use the command line MySQL tools, phpmyadmin, or any other database management tool you like
 
-> *Optional, but recommended:* If you wish to initialize the database with preloaded sample data so you can play around with Suma more quickly, then run the schema_w_sample.sql script instead of schema.sql.
+> *Optional, but recommended:* If you wish to initialize the database with preloaded sample data so you can play around with Suma more quickly, then run the `schema_w_sample.sql` script instead of `schema.sql`.
 
 
 Suma Server Software Configuration
@@ -132,11 +134,11 @@ Suma Server Software Configuration
 
 * index.php
 
-    You must set some path variables in the index.php file for the suma server to function correctly.
+    You must set some path variables in the index.php file for the Suma server to function correctly. These are located at the top of the file in the `Config` section.
 
-    `SUMA_SERVER_PATH` muse be set to location `SUMA_SERVER_INSTALL_DIR` from earlier in these instructions.
+    `$SUMA_SERVER_PATH` must be set to the `SUMA_SERVER_INSTALL_DIR` where the Suma server was installed earlier in these instructions (e.g. `/var/www/app/sumaserver`).
 
-    `SUMA_CONTROLLER_PATH` most be set to `SUMA_SERVER_INSTALL_DIR/controllers`.
+    `$SUMA_CONTROLLER_PATH` must be set to `SUMA_SERVER_INSTALL_DIR/controllers` (e.g. `/var/www/app/sumaserver/controllers`).
 
 * config.ini
 
@@ -147,9 +149,8 @@ Suma Server Software Configuration
         sumaserver.db.user      = suma mysql account name
         sumaserver.db.pword     = suma mysql account password
         sumaserver.db.port      = mysql port number
-        sumaserver.log.path = path to log directory.  You must make sure this directory is writable by Apache.
-
-* Be sure that the log directory specified in sumaserver.log.path both exists and is writable.
+        sumaserver.log.path = path to log directory.
+    * Be sure that the log directory specified in `sumaserver.log.path` both exists and is writable.
 
 Suma Analysis Tools Configuration
 ----------------------------------
@@ -165,9 +166,11 @@ to the URL for your Suma Query Server. If used a directory other than `sumaserve
 Other Things You Can Configure
 -------------------------------
 
-* The config.ini protocol allows for development/testing settings that can override the production settings.  To switch from using production settings to dev/testing settings you have to change a line in `/SUMA_SERVER_INSTALL_DIR/config/Globals.php`
+* The config.ini protocol allows for development/testing settings that can override the production settings.  To switch from using production settings to dev/testing settings, on the line in `/SUMA_SERVER_INSTALL_DIR/config/Globals.php`
 
-    In the following line `self::$_config = new Zend_Config_Ini($file, 'production');` you must change 'production' to 'development'
+        self::$_config = new Zend_Config_Ini($file, 'production');
+
+you must change 'production' to 'development'.
 
 * If you're getting generic error messages from the suma server you can change two settings in the `/YOUR_WEB_DIR/sumaserver/index.php` to generate more descriptive error messages.
 
