@@ -7,7 +7,7 @@ if ($this->init->getMetadata('enabled')) {
 
 echo "\n<div id=\"initID\">" . $this->init->getMetadata('id') . "</div>\n";
 echo '<h3>Initiative Title: <span id="initTitle">' . $this->init->getMetadata('title') . "</span></h3>\n";
-echo '<h3>Initiative Description: <span id="initDesc">' . $this->init->getMetadata('description') . "</span></h3>\n";
+echo '<h4>Initiative Description</h4><p> <span id="initDesc">' . $this->init->getMetadata('description') . "</span></p>\n";
 echo "<div><a href=\"#\" id=\"editInitMetadata\">Edit title and description</a></div>\n<br/>\n";
 
 // TODO: Check if the location tree can be changed.
