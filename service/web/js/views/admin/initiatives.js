@@ -36,7 +36,12 @@ $(document).ready(function(){
         $("a#createInitLink").hide();
         $('#initSelect').val(initID);
         // TODO use base path
-        $('#metadata').load(basePath + '/admin/initiativeload/id/' + initID, function() {
+        $('#metadata').load(basePath + '/admin/initiativeload/id/' + initID, function(response, status, jqXHR) {
+            if (status == "error") {
+                alert("Error: " + jqXHR.responseText);
+                return;
+            }
+
             $('ol.sortable').nestedSortable({
                 disableNesting: 'no-nest',
                 forcePlaceholderSize: true,
@@ -50,7 +55,8 @@ $(document).ready(function(){
                 revert: 250,
                 tabSize: 25,
                 tolerance: 'pointer',
-                toleranceElement: '> div'
+                toleranceElement: '> div',
+                doNotClear: true
             });
         });
     }
@@ -83,8 +89,8 @@ $(document).ready(function(){
                     $(this).dialog("close");
                 },
                 'Save': function() {
-                    var newInitTitle = $.trim(initTitleInput.val());
-                    var newInitDesc = $.trim(initDescInput.val());
+                    var newInitTitle = _.escape($.trim(initTitleInput.val()));
+                    var newInitDesc = _.escape($.trim(initDescInput.val()));
                     var newLocTree = $(locRootSel).val();
                     var boundThis = this;
 
@@ -103,8 +109,8 @@ $(document).ready(function(){
                             $(boundThis).dialog("close");
                             alert("Created initiative...reloading.");
                             location.reload();
-                        }).error(function() {
-                            alert("Error when creating initiative, make sure title is unique");
+                        }).error(function(jqXHR) {
+                            alert("Error: " + jqXHR.responseText);
                         });
                     } else {
                         alert("Initiative title cannot be empty and location tree must be selected");
@@ -149,8 +155,8 @@ $(document).ready(function(){
                 },
                 'Save': function() {
                     var newInitTitle, newInitDesc, boundThis;
-                    newInitTitle = $.trim(initTitleInput.val());
-                    newInitDesc = $.trim(initDescInput.val());
+                    newInitTitle = _.escape($.trim(initTitleInput.val()));
+                    newInitDesc = _.escape($.trim(initDescInput.val()));
                     boundThis = this;
 
                     if (newInitTitle.length > 0) {
@@ -162,14 +168,14 @@ $(document).ready(function(){
                                    desc: newInitDesc},
                             async: false
                         }).success(function() {
-                            initTitleSpan.text(newInitTitle);
-                            initDescSpan.text(newInitDesc);
+                            initTitleSpan.text(_.unescape(newInitTitle));
+                            initDescSpan.text(_.unescape(newInitDesc));
 
                             initTitleInput.val('');
                             initDescInput.val('');
                             $(boundThis).dialog("close");
-                        }).error(function() {
-                            alert("Unknown error when updating initiative");
+                        }).error(function(jqXHR) {
+                            alert("Error: " + jqXHR.responseText);
                         });
                     } else {
                         alert("Initiative title cannot be empty");
@@ -316,8 +322,8 @@ $(document).ready(function(){
                 async: false
             }).success(function() {
                 $(boundThis).removeClass('disableInit').addClass('enableInit').text("Enable Initiative");
-            }).error(function() {
-                alert("Unknown error when disabling initiative");
+            }).error(function(jqXHR) {
+                alert("Error: " + jqXHR.responseText);
             });
         } else if ($(this).hasClass('enableInit')) {
             $.ajax({
@@ -327,8 +333,8 @@ $(document).ready(function(){
                 async: false
             }).success(function() {
                 $(boundThis).removeClass('enableInit').addClass('disableInit').text("Disable Initiative");
-            }).error(function() {
-                alert("Unknown error when enabling initiative");
+            }).error(function(jqXHR) {
+                alert("Error: " + jqXHR.responseText);
             });
         }
 
@@ -336,10 +342,11 @@ $(document).ready(function(){
     });
 
     $("body").on("click", "#addActivityGroup", function() {
-        $('#activities').prepend('<li class="activityGroup allowMulti-act-group"><div><span class="actGroupTitle">New Activity Group</span>' +
+        $('<li class="activityGroup allowMulti-act-group"><div><span class="actGroupTitle">New Activity Group</span>' +
             '<span class="actGroupDesc"></span><span class="actGroupID">new-act-group</span><span class=\"activityControls\">' +
-            '<a href=\"#\" class=\"addActivity\">Add Activity</a><a href="#" class="editActGroup">Edit</a></span></div><ol></ol></li>');
+            '<a href=\"#\" class=\"addActivity\">Add Activity</a><a href="#" class="editActGroup">Edit</a></span></div><ol></ol></li>').prependTo('#activities').find('a.addActivity').click();
         $('#activities').nestedSortable('refresh');
+
         return false;
     });
 
@@ -359,8 +366,8 @@ $(document).ready(function(){
 
             serActGroup = {
                 id: $(this).find("span.actGroupID").text(),
-                title: $(this).find("span.actGroupTitle").text(),
-                desc: $(this).find("span.actGroupDesc").text(),
+                title: _.escape($(this).find("span.actGroupTitle").text()),
+                desc: _.escape($(this).find("span.actGroupDesc").text()),
                 required: $(this).hasClass("required-act-group"),
                 allowMulti: $(this).hasClass("allowMulti-act-group"),
                 activities: []
@@ -369,8 +376,8 @@ $(document).ready(function(){
             $(this).find('li.activity').each(function() {
                 serActGroup.activities.push({
                     id: $(this).find("span.actID").text(),
-                    title: $(this).find("span.actTitle").text(),
-                    desc: $(this).find("span.actDesc").text(),
+                    title: _.escape($(this).find("span.actTitle").text()),
+                    desc: _.escape($(this).find("span.actDesc").text()),
                     enabled: $(this).hasClass("enabled-act")
                 });
             });
@@ -378,8 +385,7 @@ $(document).ready(function(){
             serActs.push(serActGroup);
         });
 
-// TODO: Use base URL
-        console.log(serActs);
+
         $.ajax({
             type: 'POST',
             url: basePath + '/admin/updateactivities',
@@ -392,8 +398,8 @@ $(document).ready(function(){
             if (currentState.data.initID) {
                 loadInit(currentState.data.initID);
             }
-        }).error(function() {
-            alert("Unknown error when updating activities");
+        }).error(function(jqXHR) {
+            alert("Error: " + jqXHR.responseText);
         });
 
 

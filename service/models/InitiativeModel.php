@@ -130,7 +130,9 @@ class InitiativeModel
         {
             $select = $this->_db->select()
                 ->from('session')
-                ->where('deleted = false AND fk_initiative = '.$this->_id);
+                ->where('deleted = false AND fk_initiative = '.$this->_id)
+                ->order('start DESC');
+
             $rows = $select->query()->fetchAll();
             
             foreach($rows as $row)
@@ -335,7 +337,7 @@ class InitiativeModel
                 $select->where('enabled = true');
             }
             
-        $rows = $select->query()->fetchAll();
+        $rows = $select->order('title ASC')->query()->fetchAll();
         
         $inits = array();
         foreach($rows as $row)

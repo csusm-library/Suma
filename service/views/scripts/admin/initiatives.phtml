@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <?php $baseDir = Zend_Controller_Front::getInstance()->getBaseUrl(); ?>
 <html>
+<<<<<<< HEAD
 <head>
   <meta charset="UTF-8" />
   <title>Initiatives : Suma Admin Dashboard</title>
@@ -21,6 +22,33 @@ echo "\nvar basePath='$baseDir';\n";
 <body>
 <?php echo $this->render('admin/header.phtml'); ?>
 <div id="newInitDialog" style="display:none">
+=======
+    <head>
+        <link rel="stylesheet" type="text/css" href="<?php echo $baseDir; ?>/css/jquery-ui-theme/css/cupertino/jquery-ui-1.10.3.custom.min.css" />
+        <link rel="stylesheet" type="text/css" href="<?php echo $baseDir; ?>/css/admin.css" />
+
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js" type="text/javascript"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js" type="text/javascript"></script>
+        <script src="<?php echo $baseDir; ?>/js/nestedSortable/nestedSortable.js" type="text/javascript"></script>
+        <script src="<?php echo $baseDir; ?>/js/jquery.history.html4html5/jquery.history.js" type="text/javascript"></script>
+        <script src="<?php echo $baseDir; ?>/js/lo-dash/lodash.compat.min.js" type="text/javascript"></script>
+        <script type="text/javascript">
+        <?php
+            if (isset($_GET['initID'])) {
+                echo 'var recoveredID = ' . $_GET['initID'] . ';';
+            } else {
+                echo 'var recoveredID = null;';
+            }
+
+            echo "\nvar basePath='$baseDir';\n";
+        ?>
+        </script>
+        <script src="<?php echo $baseDir; ?>/js/views/admin/initiatives.js" type="text/javascript"></script>
+    </head>
+    <body>
+        <?php echo $this->render('admin/header.phtml'); ?>
+        <div id="newInitDialog" style="display:none">
+>>>>>>> d4131c56cfba78e3b0877836030991fbb6c01e1c
             <form>
                 <input type="text" id="newInitTitleInput" name="newInitTitleInput" value="" /><br>
                 <textarea id="newInitDescInput" name="newInitDescInput"></textarea><br><br>

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 *~
 *.cache
 *.log
@@ -20,3 +21,21 @@ service/config/config.ini.LOCAL.7352.ini
 service/config/config.ini.REMOTE.4384.ini
 service/config/config.ini.REMOTE.5192.ini
 service/config/config.ini.REMOTE.7352.ini
+=======
+*~
+*.cache
+*.log
+*.pid
+tmp/**/*
+.DS_Store
+._*
+.htaccess
+.htpasswd
+
+# Configuration Files
+service/config/config.ini
+service/config/config.yaml
+service/web/config/config.yaml
+web/config/spaceassessConfig.js
+analysis/config/config.yaml
+>>>>>>> d4131c56cfba78e3b0877836030991fbb6c01e1c

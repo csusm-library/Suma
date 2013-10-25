@@ -1,9 +1,12 @@
 <?php
 
-require_once '../../lib/php/ChromePhp.php';
 require_once '../../lib/php/ServerIO.php';
 require_once '../../lib/php/Gump.php';
 require_once '../../lib/php/SumaGump.php';
+
+// Suppress Error Reporting
+error_reporting(0);
+ini_set('display_errors', 0);
 
 /**
  * TimeSeriesData - Class to process data for display in a time series.
@@ -62,6 +65,7 @@ class TimeSeriesData
     private $actHash = array();
     private $locHash = array();
     private $csvScaffold = NULL;
+    private $hourSumScaffold = NULL;
     /**
      * Method to populate $csvScaffold, used for csv count collection
      * @param  array $locListIds
@@ -131,6 +135,115 @@ class TimeSeriesData
 
         return $scaffoldArray;
     }
+    private function buildHourSummaryScaffold()
+    {
+        $array = array();
+
+        for ($i = 0; $i <= 23; $i++)
+        {
+            $array[$i] = 0;
+        }
+
+        return $array;
+    }
+    private function buildHourSummaryScaffoldAvg()
+    {
+        $array = array();
+        $subArray = array(
+                "sum" => NULL,
+                "avg" => NULL,
+                "hourCounts" => array(),
+                "avgDays" => NULL,
+                "divisor" => NULL
+            );
+
+        for ($i = 0; $i <= 23; $i++)
+        {
+            $array[$i] = $subArray;
+        }
+
+        return $array;
+    }
+    private function buildDailyHourSummaryScaffold()
+    {
+        $array = array();
+
+        for ($i = 0; $i <= 6; $i++)
+        {
+            $array[$i] = $this->buildHourSummaryScaffoldAvg();
+        }
+
+        return $array;
+    }
+    /**
+     * Builds a hash of divisors for calculating
+     * daily averages within the dailyHourSummary
+     * dataset.
+     * @param  array $params Form parameters
+     * @return array         Array with day indices and divisor values
+     */
+    private function buildHourlyDivisors($params)
+    {
+        $hash = array();
+
+        for ($i = 0; $i <= 6; $i++)
+        {
+            $hash[$i] = 0;
+        }
+
+        $sdate = $params['sdate'];
+        $edate = $params['edate'];
+
+        // If $sdate and $edate are empty, say for a full query, set dummy values
+        // using min/max values of data from server
+        if (empty($sdate))
+        {
+            $keys  = array_keys($countHash['periodSum']);
+            $sdate = min($keys);
+            $sdate = str_replace("-", "", $sdate);
+        }
+
+        if (empty($edate))
+        {
+            $keys  = array_keys($countHash['periodSum']);
+            $edate = max($keys);
+            $edate = str_replace("-", "", $edate);
+        }
+
+        $diff = abs(strtotime($edate . 'Z') - strtotime($sdate . 'Z'));
+
+        // Add 1 and convert to integer
+        $daysInRange = round(($diff / (60 * 60 * 24))) + 1;
+
+        // Detect remainder
+        $extras = $daysInRange % 7;
+
+        // Bulk of series
+        $mainChunk = $daysInRange - $extras;
+
+        // Get index of start date (same as first day of extras)
+        $startDayIndex = date('w', strtotime($sdate));
+
+        // Add bulk count to each day
+        foreach($hash as $key => $day)
+        {
+            $hash[$key] += $mainChunk / 7;
+        }
+
+        // Add extras to appropriate days
+        for ($i = 0; $i < $extras; $i++)
+        {
+            $dayIndex = $i + $startDayIndex;
+            if ($dayIndex > 6)
+            {
+                $dayIndex = $dayIndex - 7;
+            }
+
+            $hash[$dayIndex]++;
+        }
+
+        return $hash;
+    }
     /**
      * Basic pluck method
      * @param  array $input
@@ -191,7 +304,8 @@ class TimeSeriesData
             'sdate'      => 'trim|sanitize_numbers|rmhyphen',
             'edate'      => 'trim|sanitize_numbers|rmhyphen',
             'stime'      => 'trim|sanitize_numbers',
-            'etime'      => 'trim|sanitize_numbers'
+            'etime'      => 'trim|sanitize_numbers',
+            'session'    => 'trim'
         );
 
         // Define validation rules
@@ -217,7 +331,9 @@ class TimeSeriesData
                     'sdate'      => $input['sdate'],
                     'edate'      => $input['edate'],
                     'stime'      => $input['stime'],
-                    'etime'      => $input['etime']
+                    'etime'      => $input['etime'],
+                    'session'    => $input['session'],
+                    'session_filter' => $input['session_filter']
             );
 
             // Manipulate activities field, maybe not the best place for this
@@ -392,6 +508,8 @@ class TimeSeriesData
         $locID   = $params['locations'];
         $actDict = $response['initiative']['dictionary']['activities'];
         $locDict = $response['initiative']['dictionary']['locations'];
+        $bin     = $params['session'];
+        $include_sessions = $params['session_filter'];
 
         // Populate location list for filters
         if (empty($this->locListIds))
@@ -415,68 +533,113 @@ class TimeSeriesData
             $this->csvScaffold = $this->buildCSVScaffold($actDict, $locDict);
         }
 
+        // Populate hour summary scaffold
+        if (!isset($this->countHash['hourSummary']))
+        {
+            $this->countHash['hourSummary'] = $this->buildHourSummaryScaffold();
+        }
+
+        // Populate daily hour summary scaffold
+        if (!isset($this->countHash['dailyHourSummary']))
+        {
+            $this->countHash['dailyHourSummary'] = $this->buildDailyHourSummaryScaffold();
+        }
+
         if (isset($response['initiative']['sessions']))
         {
             $sessions = $response['initiative']['sessions'];
             foreach ($sessions as $sess)
             {
-                // Get date of session
-                $day = substr($sess['start'], 0, -9);
-
-                // Convert date to day of the week
-                $weekday = date('l', strtotime($day));
-
-                // Test if weekday is in days array (filter)
-                if (in_array($weekday, $params['days']))
+                $sessLocations = $sess['locations'];
+                foreach ($sessLocations as $loc)
                 {
-                    $sessLocations = $sess['locations'];
-                    foreach ($sessLocations as $loc)
+                    // Test if location is in locations array
+                    if ($params['locations'] === 'all' || in_array($loc['id'], $this->locListIds))
                     {
-                        // Test if location is in locations array
-                        if ($params['locations'] === 'all' || in_array($loc['id'], $this->locListIds))
+                        $counts = $loc['counts'];
+                        foreach ($counts as $count)
                         {
-                            $counts = $loc['counts'];
-                            foreach ($counts as $count)
+                            // Get date based on count or session
+                            if ($bin === 'count')
                             {
-                                // Honor time filters using count time and input params
-                                $cTime = str_replace(':', '', substr($count['time'], -8, 5));
-                                $sTime = $params['stime'];
-                                $eTime = $params['etime'];
+                                $day = substr($count['time'], 0, -9);
+                            }
+                            elseif ($bin === 'start') {
+                                $day = substr($sess['start'], 0, -9);
+                            }
+                            elseif ($bin === 'end')
+                            {
+                                $day = substr($sess['end'], 0, -9);
+                            }
 
-                                // Both stime and etime filters are present
-                                if (!empty($sTime) && !empty($eTime))
+                            // Convert date to day of the week
+                            $weekday = date('l', strtotime($day));
+                            $weekdayInt = date('w', strtotime($day));
+
+                            // Convert date to hour of day
+                            $hour = date('G', strtotime($count['time']));
+
+                            if (in_array($weekday, $params['days']))
+                            {
+                                if ($include_sessions === 'false')
                                 {
-                                    // Ordered time range
-                                    if ($sTime < $eTime)
+                                    // Honor date filters and remove extra days pulled in by session
+                                    $sDate = $params['sdate'];
+                                    $eDate = $params['edate'];
+                                    $tDate = str_replace('-', '', $day);
+
+                                    // Enforce start date filter
+                                    if (!empty($sDate) && $tDate < $sDate)
                                     {
-                                        if ($cTime < $sTime || $cTime > $eTime)
+                                        continue;
+                                    }
+
+                                    // Enforce end date filter
+                                    if (!empty($eDate) && $tDate > $eDate)
+                                    {
+                                        continue;
+                                    }
+
+                                    // Honor time filters using count time and input params
+                                    $cTime = str_replace(':', '', substr($count['time'], -8, 5));
+                                    $sTime = $params['stime'];
+                                    $eTime = $params['etime'];
+
+                                    // Both stime and etime filters are present
+                                    if (!empty($sTime) && !empty($eTime))
+                                    {
+                                        // Ordered time range
+                                        if ($sTime < $eTime)
+                                        {
+                                            if ($cTime < $sTime || $cTime > $eTime)
+                                            {
+                                                continue;
+                                            }
+                                        }
+                                        // Unordered time range
+                                        else
+                                        {
+                                            if ($cTime < $sTime && $cTime > $eTime)
+                                            {
+                                                continue;
+                                            }
+                                        }
+                                    }
+                                    // sTime is present
+                                    elseif (!empty($sTime))
+                                    {
+                                        if ($cTime < $sTime)
                                         {
                                             continue;
                                         }
                                     }
-                                    // Unordered time range
-                                    else
+                                    // eTime is present
+                                    elseif (!empty($eTime))
                                     {
-                                        if ($cTime < $sTime && $cTime > $eTime)
+                                        if ($cTime > $eTime)
                                         {
                                             continue;
                                         }
-                                    }
-                                }
-                                // sTime is present
-                                elseif (!empty($sTime))
-                                {
-                                    if ($cTime < $sTime)
-                                    {
-                                        continue;
-                                    }
-                                }
-                                // eTime is present
-                                elseif (!empty($eTime))
-                                {
-                                    if ($cTime > $eTime)
-                                    {
-                                        continue;
                                     }
                                 }
 
@@ -498,7 +661,7 @@ class TimeSeriesData
                                         // Scaffold countHash for day
                                         $this->countHash['csv'][$day] = $this->csvScaffold;
 
-                                        // Insert Base information for day, totla and locations
+                                        // Insert Base information for day, total and locations
                                         $this->countHash['csv'][$day]['date'] = $day;
                                         $this->countHash['csv'][$day]['total'] = $count['number'];
                                         $this->countHash['csv'][$day]['locations'][$this->locHash[$loc['id']]] = $count['number'];
@@ -578,6 +741,36 @@ class TimeSeriesData
                                     else
                                     {
                                         $this->countHash['dayOfWeekSummary'][$weekday] += $count['number'];
+                                    }
+
+                                    // Build Hourly Summary array
+                                    if(!isset($this->countHash['hourSummary'][$hour]))
+                                    {
+                                        $this->countHash['hourSummary'][$hour] = $count['number'];
+                                    }
+                                    else
+                                    {
+                                        $this->countHash['hourSummary'][$hour] += $count['number'];
+                                    }
+
+                                    // Build Daily Hourly Summary array
+                                    if(!isset($this->countHash['dailyHourSummary'][$weekdayInt][$hour]))
+                                    {
+                                        $this->countHash['dailyHourSummary'][$weekdayInt][$hour]['sum'] = $count['number'];
+                                        $this->countHash['dailyHourSummary'][$weekdayInt][$hour]['hourCounts'][$day] = $count['number'];
+                                    }
+                                    else
+                                    {
+                                        $this->countHash['dailyHourSummary'][$weekdayInt][$hour]['sum'] += $count['number'];
+
+                                        if(!isset($this->countHash['dailyHourSummary'][$weekdayInt][$hour]['hourCounts'][$day]))
+                                        {
+                                            $this->countHash['dailyHourSummary'][$weekdayInt][$hour]['hourCounts'][$day] = $count['number'];
+                                        }
+                                        else
+                                        {
+                                            $this->countHash['dailyHourSummary'][$weekdayInt][$hour]['hourCounts'][$day] += $count['number'];
+                                        }
                                     }
 
                                     // Build periodSum array
@@ -680,7 +873,7 @@ class TimeSeriesData
      * @param  array $countHash
      * @return array
      */
-    public function calculateAvg($countHash)
+    public function calculateAvg($countHash, $params)
     {
         if (empty($countHash))
         {
@@ -812,6 +1005,28 @@ class TimeSeriesData
         }
 
 
+        $hourlyHash = $this->buildHourlyDivisors($params);
+
+        // dailyHourSummary averages
+        foreach ($countHash['dailyHourSummary'] as $dayKey => $day)
+        {
+            foreach ($day as $hourKey => $hour)
+            {
+                $count = count($hour['hourCounts']);
+
+                if ($count !== 0)
+                {
+                    $avg = array_sum(array_values($hour['hourCounts'])) / $count;
+                    $countHash['dailyHourSummary'][$dayKey][$hourKey]['avg'] = $avg;
+
+                    $avgDays = array_sum(array_values($hour['hourCounts'])) / $hourlyHash[$dayKey];
+                    $countHash['dailyHourSummary'][$dayKey][$hourKey]['avgDays'] = $avgDays;
+                    $countHash['dailyHourSummary'][$dayKey][$hourKey]['divisor'] = $hourlyHash[$dayKey];
+
+                }
+            }
+        }
+
         return $countHash;
     }
     /**
@@ -826,7 +1041,7 @@ class TimeSeriesData
      * @param  array $params
      * @return array
      */
-    public function cullData($data, $params)
+    public function padData($data, $params)
     {
         $sdate = $params['sdate'];
         $edate = $params['edate'];
@@ -860,7 +1075,7 @@ class TimeSeriesData
                 // This check is to avoid padding days we don't want
                 if (in_array($weekday, $params['days']))
                 {
-                    $data['periodSum'][$date]['count'] = 0;
+                    $data['periodSum'][$date]['count'] = NULL;
                 }
             }
 
@@ -871,30 +1086,8 @@ class TimeSeriesData
                 // This check is to avoid padding days we don't want
                 if (in_array($weekday, $params['days']))
                 {
-                    $data['periodAvg'][$date]['count'] = 0;
+                    $data['periodAvg'][$date]['count'] = NULL;
                 }
-            }
-        }
-
-        // Remove any days outside of query range (Sessions will sometimes pull in extra days)
-        $sdate = strtotime($sdate);
-        $sdate = date('Y-m-d', $sdate);
-        $edate = strtotime($edate);
-        $edate = date('Y-m-d', $edate);
-
-        foreach($data['periodSum'] as $key => $val)
-        {
-            if (($key < $sdate) || ($key > $edate))
-            {
-                unset($data['periodSum'][$key]);
-            }
-        }
-
-        foreach($data['periodAvg'] as $key => $val)
-        {
-            if (($key < $sdate) || ($key > $edate))
-            {
-                unset($data['periodAvg'][$key]);
             }
         }
 
